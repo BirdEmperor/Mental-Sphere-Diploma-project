@@ -11,6 +11,16 @@ public class RuntimeTerrainGenerator : MonoBehaviour
     [Tooltip("0 = Grass, 1 = Sand/Dirt/Path, 2 = Rock.")]
     [SerializeField] private TerrainLayer[] terrainLayers;
 
+    [Header("Land Shape")]
+    [Tooltip("Default land height in world units. The terrain is intentionally almost flat for comfort in VR.")]
+    [SerializeField] private float defaultLandHeight = 0.72f;
+
+    [Tooltip("Maximum amplitude of long, soft hills. Keep this low for comfort.")]
+    [SerializeField] private float broadHillAmplitude = 0.28f;
+
+    [Tooltip("Small surface variation amplitude. Keep this very low to avoid noisy terrain.")]
+    [SerializeField] private float microVariationAmplitude = 0.045f;
+
     [Header("Noise")]
     [SerializeField] private int octaves = 2;
     [SerializeField] private float persistence = 0.35f;
@@ -53,6 +63,9 @@ public class RuntimeTerrainGenerator : MonoBehaviour
         float seedOffsetX = (response.seed % 100000) * 0.013f;
         float seedOffsetZ = (response.seed % 70000) * 0.017f;
 
+        bool hasWater = response.audio != null && response.audio.waterEnabled && config.waterRadius > 0.1f;
+        float landBase = CalculateLandBaseHeight(config, hasWater);
+
         for (int z = 0; z < heightmapResolution; z++)
         {
             for (int x = 0; x < heightmapResolution; x++)
@@ -60,18 +73,12 @@ public class RuntimeTerrainGenerator : MonoBehaviour
                 float nx = (float)x / (heightmapResolution - 1);
                 float nz = (float)z / (heightmapResolution - 1);
 
-                float heightWorld = FractalNoise(
-                    nx,
-                    nz,
-                    config.noiseScale,
-                    seedOffsetX,
-                    seedOffsetZ
-                ) * config.heightMultiplier;
+                float heightWorld = BuildCalmLandHeight(nx, nz, config, landBase, seedOffsetX, seedOffsetZ);
 
                 heightWorld = ApplyLakeDepression(heightWorld, nx, nz, config, response);
-                heightWorld = ApplySafeSpawnFlattening(heightWorld, nx, nz, config);
+                heightWorld = ApplySafeSpawnFlattening(heightWorld, nx, nz, config, landBase);
 
-                heights[z, x] = Mathf.Clamp01(heightWorld / config.terrainHeight);
+                heights[z, x] = Mathf.Clamp01(heightWorld / Mathf.Max(0.01f, config.terrainHeight));
             }
         }
 
@@ -96,7 +103,47 @@ public class RuntimeTerrainGenerator : MonoBehaviour
 
         RefreshTeleportComponents();
 
-        Debug.Log($"[RuntimeTerrainGenerator] Terrain generated. Seed: {response.seed}");
+        Debug.Log($"[RuntimeTerrainGenerator] Terrain generated. Seed: {response.seed}, biome={response.biome}, water={hasWater}");
+    }
+
+    private float CalculateLandBaseHeight(TerrainConfig config, bool hasWater)
+    {
+        if (!hasWater)
+            return Mathf.Clamp(defaultLandHeight, 0.18f, config.terrainHeight - 0.25f);
+
+        float minimumLandAboveWater = config.waterLevel + 0.38f;
+        float desired = Mathf.Max(defaultLandHeight, minimumLandAboveWater);
+
+        return Mathf.Clamp(desired, 0.18f, config.terrainHeight - 0.25f);
+    }
+
+    private float BuildCalmLandHeight(float nx, float nz, TerrainConfig config, float landBase, float seedOffsetX, float seedOffsetZ)
+    {
+        float broad = FractalNoise(
+            nx,
+            nz,
+            Mathf.Max(0.35f, config.noiseScale * 0.22f),
+            seedOffsetX,
+            seedOffsetZ
+        );
+
+        broad = (broad - 0.5f) * 2f;
+
+        float micro = FractalNoise(
+            nx,
+            nz,
+            Mathf.Max(1.2f, config.noiseScale),
+            seedOffsetX + 177.3f,
+            seedOffsetZ + 59.7f
+        );
+
+        micro = (micro - 0.5f) * 2f;
+
+        float requestedHill = Mathf.Clamp(config.heightMultiplier, 0f, 1.2f);
+        float broadHeight = broad * broadHillAmplitude * Mathf.Lerp(0.35f, 1f, requestedHill);
+        float microHeight = micro * microVariationAmplitude;
+
+        return landBase + broadHeight + microHeight;
     }
 
     private float FractalNoise(float nx, float nz, float scale, float seedOffsetX, float seedOffsetZ)
@@ -136,28 +183,33 @@ public class RuntimeTerrainGenerator : MonoBehaviour
         Vector2 lakeCenter = new Vector2(config.waterCenterX, config.waterCenterZ);
 
         float lakeRadiusNormalized = config.waterRadius / Mathf.Max(1f, config.size);
-        float shoreRadius = lakeRadiusNormalized * 1.22f;
+        float shoreRadius = lakeRadiusNormalized * 1.32f;
         float distance = Vector2.Distance(point, lakeCenter);
 
         if (distance > shoreRadius)
             return heightWorld;
 
-        float lakeBottom = Mathf.Max(0.03f, config.waterLevel - config.lakeDepth);
+        float lakeBottom = Mathf.Max(0.02f, config.waterLevel - Mathf.Max(0.25f, config.lakeDepth));
+        float shallowBottom = Mathf.Max(0.03f, config.waterLevel - 0.24f);
 
         if (distance < lakeRadiusNormalized)
         {
             float centerT = Mathf.InverseLerp(lakeRadiusNormalized, 0f, distance);
-            float bottom = Mathf.Lerp(config.waterLevel - 0.18f, lakeBottom, centerT);
+            centerT = Mathf.SmoothStep(0f, 1f, centerT);
+
+            float bottom = Mathf.Lerp(shallowBottom, lakeBottom, centerT);
             return Mathf.Min(heightWorld, bottom);
         }
 
         float shoreT = Mathf.InverseLerp(shoreRadius, lakeRadiusNormalized, distance);
-        float shoreHeight = Mathf.Lerp(heightWorld, config.waterLevel - 0.12f, shoreT);
+        shoreT = Mathf.SmoothStep(0f, 1f, shoreT);
+
+        float shoreHeight = Mathf.Lerp(heightWorld, config.waterLevel - 0.08f, shoreT);
 
         return Mathf.Min(heightWorld, shoreHeight);
     }
 
-    private float ApplySafeSpawnFlattening(float heightWorld, float nx, float nz, TerrainConfig config)
+    private float ApplySafeSpawnFlattening(float heightWorld, float nx, float nz, TerrainConfig config, float landBase)
     {
         Vector2 point = new Vector2(nx, nz);
         Vector2 center = new Vector2(0.5f, 0.5f);
@@ -169,9 +221,9 @@ public class RuntimeTerrainGenerator : MonoBehaviour
             return heightWorld;
 
         float t = Mathf.Clamp01(distance / radiusNormalized);
-        float targetHeight = 0.30f;
+        t = Mathf.SmoothStep(0f, 1f, t);
 
-        return Mathf.Lerp(targetHeight, heightWorld, t);
+        return Mathf.Lerp(landBase, heightWorld, t);
     }
 
     private float[,] SmoothHeights(float[,] source)
@@ -259,21 +311,21 @@ public class RuntimeTerrainGenerator : MonoBehaviour
 
                     if (distance < lakeRadiusNormalized * textures.sandShoreWidth)
                     {
-                        weights[grassIndex] = 0.10f;
-                        weights[sandIndex] = 0.82f;
-                        weights[rockIndex] = 0.08f;
+                        weights[grassIndex] = 0.08f;
+                        weights[sandIndex] = 0.86f;
+                        weights[rockIndex] = 0.06f;
                     }
                     else if (distance < lakeRadiusNormalized * textures.rockShoreWidth)
                     {
-                        weights[grassIndex] = 0.45f;
-                        weights[sandIndex] = 0.20f;
-                        weights[rockIndex] = 0.35f;
+                        weights[grassIndex] = 0.55f;
+                        weights[sandIndex] = 0.25f;
+                        weights[rockIndex] = 0.20f;
                     }
 
                     if (height < config.waterLevel + textures.lowHeightSandOffset)
                     {
-                        weights[grassIndex] = Mathf.Min(weights[grassIndex], 0.30f);
-                        weights[sandIndex] = Mathf.Max(weights[sandIndex], 0.60f);
+                        weights[grassIndex] = Mathf.Min(weights[grassIndex], 0.22f);
+                        weights[sandIndex] = Mathf.Max(weights[sandIndex], 0.68f);
                     }
                 }
 
@@ -368,7 +420,7 @@ public class RuntimeTerrainGenerator : MonoBehaviour
                 terrainPos.z + data.size.z * config.waterCenterZ
             );
 
-            float blockedRadius = config.waterRadius + 3.0f;
+            float blockedRadius = config.waterRadius + 5.0f;
 
             Vector2 center2 = new Vector2(center.x, center.z);
             Vector2 lake2 = new Vector2(lakeCenterWorld.x, lakeCenterWorld.z);
