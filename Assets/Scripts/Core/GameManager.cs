@@ -29,6 +29,12 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Transform hubSpawnPoint;
     [SerializeField] private Transform locationCenter;
 
+    [Header("Return Sphere")]
+    [SerializeField] private GameObject returnSpherePrefab;
+    [SerializeField] private float returnSphereForwardDistance = 2.2f;
+    [SerializeField] private float returnSphereHeightOffset = 1.25f;
+    [SerializeField] private float returnSphereSideOffset = 0.7f;
+
     [Header("Generated Location Offset")]
     [SerializeField] private Vector3 baseLocationCenter = new Vector3(0f, 0f, 120f);
     [SerializeField] private float randomLocationOffsetRadius = 20f;
@@ -54,6 +60,8 @@ public class GameManager : MonoBehaviour
     private int interactionCount;
     private int stonesThrown;
     private int objectsCollected;
+
+    private GameObject spawnedReturnSphere;
 
     private void Start()
     {
@@ -228,6 +236,7 @@ public class GameManager : MonoBehaviour
             biomeApplicator.ApplyBiome(response);
 
         MovePlayerToGeneratedLocation();
+        SpawnReturnSphereNearPlayer();
 
         if (hubRoot != null)
             hubRoot.SetActive(false);
@@ -264,6 +273,57 @@ public class GameManager : MonoBehaviour
 
         xrOrigin.position = spawnPosition;
         xrOrigin.rotation = Quaternion.identity;
+    }
+
+    private void SpawnReturnSphereNearPlayer()
+    {
+        if (returnSpherePrefab == null)
+        {
+            Debug.LogWarning("[GameManager] Return sphere prefab is not assigned.");
+            return;
+        }
+
+        if (xrOrigin == null)
+        {
+            Debug.LogWarning("[GameManager] XR Origin is not assigned. Cannot spawn return sphere.");
+            return;
+        }
+
+        if (spawnedReturnSphere != null)
+        {
+            Destroy(spawnedReturnSphere);
+            spawnedReturnSphere = null;
+        }
+
+        Vector3 forward = xrOrigin.forward;
+        forward.y = 0f;
+
+        if (forward.sqrMagnitude < 0.001f)
+            forward = Vector3.forward;
+
+        forward.Normalize();
+
+        Vector3 right = xrOrigin.right;
+        right.y = 0f;
+
+        if (right.sqrMagnitude < 0.001f)
+            right = Vector3.right;
+
+        right.Normalize();
+
+        Vector3 spawnPosition =
+            xrOrigin.position +
+            forward * returnSphereForwardDistance +
+            right * returnSphereSideOffset +
+            Vector3.up * returnSphereHeightOffset;
+
+        Quaternion spawnRotation = Quaternion.LookRotation(-forward, Vector3.up);
+        Transform parent = locationRoot != null ? locationRoot.transform : null;
+
+        spawnedReturnSphere = Instantiate(returnSpherePrefab, spawnPosition, spawnRotation, parent);
+        spawnedReturnSphere.name = $"{returnSpherePrefab.name}_GeneratedReturnSphere";
+
+        Debug.Log("[GameManager] Return sphere spawned near player.");
     }
 
     public void RegisterInteraction(string eventName)
@@ -352,6 +412,12 @@ public class GameManager : MonoBehaviour
 
     private void ReturnPlayerToHub()
     {
+        if (spawnedReturnSphere != null)
+        {
+            Destroy(spawnedReturnSphere);
+            spawnedReturnSphere = null;
+        }
+
         if (terrainBoundaryBuilder != null)
             terrainBoundaryBuilder.ClearBoundaries();
 

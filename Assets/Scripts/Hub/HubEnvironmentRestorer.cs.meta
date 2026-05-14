@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 530308727cde81c4682a94cb0bd9a692
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - hubSkybox: {fileID: 2100000, guid: 97fca95f33987e548be9dd7c03cb1a96, type: 2}
+  - directionalLight: {instanceID: 0}
+  - ambientAudioSource: {instanceID: 0}
+  - hubAmbientClip: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
