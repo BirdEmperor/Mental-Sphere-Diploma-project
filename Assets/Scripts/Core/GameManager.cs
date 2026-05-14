@@ -36,6 +36,7 @@ public class GameManager : MonoBehaviour
     [Header("Testing")]
     [SerializeField] private bool enableKeyboardTest = true;
     [SerializeField] private string testSphereColor = "blue";
+    [SerializeField] private bool allowKeyboardGenerationDuringSession = false;
 
     [Header("Player Safety")]
     [SerializeField] private float playerFallResetY = -10f;
@@ -77,32 +78,34 @@ public class GameManager : MonoBehaviour
         if (!enableKeyboardTest)
             return;
 
+        bool generationKeysAllowed = !sessionActive || allowKeyboardGenerationDuringSession;
+
 #if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.bKey.wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current.bKey.wasPressedThisFrame && generationKeysAllowed)
             OnSphereActivated(testSphereColor);
 
-        if (Keyboard.current != null && Keyboard.current.digit1Key.wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current.digit1Key.wasPressedThisFrame && generationKeysAllowed)
             OnSphereActivated("blue");
 
-        if (Keyboard.current != null && Keyboard.current.digit2Key.wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current.digit2Key.wasPressedThisFrame && generationKeysAllowed)
             OnSphereActivated("green");
 
-        if (Keyboard.current != null && Keyboard.current.digit3Key.wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current.digit3Key.wasPressedThisFrame && generationKeysAllowed)
             OnSphereActivated("yellow");
 
         if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
             FinishCurrentSession();
 #else
-        if (Input.GetKeyDown(KeyCode.B))
+        if (Input.GetKeyDown(KeyCode.B) && generationKeysAllowed)
             OnSphereActivated(testSphereColor);
 
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        if (Input.GetKeyDown(KeyCode.Alpha1) && generationKeysAllowed)
             OnSphereActivated("blue");
 
-        if (Input.GetKeyDown(KeyCode.Alpha2))
+        if (Input.GetKeyDown(KeyCode.Alpha2) && generationKeysAllowed)
             OnSphereActivated("green");
 
-        if (Input.GetKeyDown(KeyCode.Alpha3))
+        if (Input.GetKeyDown(KeyCode.Alpha3) && generationKeysAllowed)
             OnSphereActivated("yellow");
 
         if (Input.GetKeyDown(KeyCode.F))
@@ -121,6 +124,12 @@ public class GameManager : MonoBehaviour
         if (isTransitionRunning)
         {
             Debug.LogWarning("[GameManager] Transition already running.");
+            return;
+        }
+
+        if (sessionActive)
+        {
+            Debug.LogWarning($"[GameManager] Location session is already active. Sphere activation ignored: {color}");
             return;
         }
 
@@ -145,7 +154,7 @@ public class GameManager : MonoBehaviour
 
         if (response == null)
         {
-            Debug.LogError("[GameManager] Generation response is null.");
+            Debug.LogError("[GameManager] Generation response is null. Location generation canceled.");
             isTransitionRunning = false;
             yield break;
         }
