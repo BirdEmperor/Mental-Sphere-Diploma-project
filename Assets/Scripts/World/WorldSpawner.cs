@@ -31,6 +31,11 @@ public class WorldSpawner : MonoBehaviour
     [SerializeField] private float defaultYOffset = 0f;
     [SerializeField] private float pickupStoneYOffset = 0.18f;
 
+    [Header("Dense Ground Cover")]
+    [Tooltip("Grass/flowers use more forgiving placement because they are decorative ground cover.")]
+    [SerializeField] private int denseGroundCoverAttemptsPerObject = 35;
+    [SerializeField] private bool denseGroundCoverIgnoresSafeRadius = false;
+
     [Header("Scale")]
     [SerializeField] private Vector2 treeScale = new Vector2(0.55f, 0.90f);
     [SerializeField] private Vector2 rockScale = new Vector2(0.30f, 0.70f);
@@ -40,7 +45,7 @@ public class WorldSpawner : MonoBehaviour
     [SerializeField] private Vector2 flowerScale = new Vector2(0.75f, 1.35f);
     [SerializeField] private Vector2 reedScale = new Vector2(0.70f, 1.25f);
     [SerializeField] private Vector2 branchScale = new Vector2(0.16f, 0.34f);
-    [SerializeField] private Vector2 pickupStoneScale = new Vector2(0.025f, 0.065f);
+    [SerializeField] private Vector2 pickupStoneScale = new Vector2(0.035f, 0.075f);
     [SerializeField] private Vector2 effectScale = new Vector2(0.35f, 0.65f);
 
     private RuntimeTerrainGenerator terrainGenerator;
@@ -73,19 +78,20 @@ public class WorldSpawner : MonoBehaviour
         InteractiveCounts interactives = response.interactives ?? new InteractiveCounts();
         EffectCounts effects = response.effects ?? new EffectCounts();
 
-        SpawnCategory("Trees", treePrefabs, counts.treeCount, rules.treeMaxSlope, treeScale, false, false, false, false, rules);
-        SpawnCategory("Rocks", rockPrefabs, counts.rockCount, rules.rockMaxSlope, rockScale, true, false, false, false, rules);
+        bool hasWater = response.audio != null && response.audio.waterEnabled;
 
-        SpawnCategory("Branches", branchPrefabs, counts.branchCount, rules.rockMaxSlope, branchScale, true, false, false, false, rules);
+        SpawnCategory("Trees", treePrefabs, counts.treeCount, rules.treeMaxSlope, treeScale, false, false, false, false, false, rules);
+        SpawnCategory("Rocks", rockPrefabs, counts.rockCount, rules.rockMaxSlope, rockScale, true, false, false, false, false, rules);
+        SpawnCategory("Branches", branchPrefabs, counts.branchCount, rules.rockMaxSlope, branchScale, true, false, false, false, false, rules);
 
-        SpawnCategory("Cliffs", cliffPrefabs, counts.cliffCount, rules.cliffMaxSlope, cliffScale, false, false, false, false, rules);
-        SpawnCategory("Bushes", bushPrefabs, counts.bushCount, rules.bushMaxSlope, bushScale, false, false, false, false, rules);
+        SpawnCategory("Cliffs", cliffPrefabs, counts.cliffCount, rules.cliffMaxSlope, cliffScale, false, false, false, false, false, rules);
+        SpawnCategory("Bushes", bushPrefabs, counts.bushCount, rules.bushMaxSlope, bushScale, false, false, false, false, false, rules);
 
-        SpawnCategory("Grass", grassPatchPrefabs, counts.grassPatchCount, rules.grassMaxSlope, grassScale, false, false, true, false, rules);
-        SpawnCategory("Flowers", flowerPatchPrefabs, counts.flowerPatchCount, rules.flowerMaxSlope, flowerScale, false, false, true, false, rules);
+        SpawnCategory("Grass", grassPatchPrefabs, counts.grassPatchCount, rules.grassMaxSlope, grassScale, false, false, true, false, true, rules);
+        SpawnCategory("Flowers", flowerPatchPrefabs, counts.flowerPatchCount, rules.flowerMaxSlope, flowerScale, false, false, true, false, true, rules);
 
-        if (response.audio != null && response.audio.waterEnabled)
-            SpawnCategory("Reeds", reedPrefabs, counts.reedCount, rules.grassMaxSlope, reedScale, false, true, true, false, rules);
+        if (hasWater)
+            SpawnCategory("Reeds", reedPrefabs, counts.reedCount, rules.grassMaxSlope, reedScale, false, true, true, false, true, rules);
 
         SpawnCategory(
             "PickupStones",
@@ -94,9 +100,10 @@ public class WorldSpawner : MonoBehaviour
             rules.rockMaxSlope,
             pickupStoneScale,
             true,
-            response.audio != null && response.audio.waterEnabled,
+            hasWater,
             false,
             true,
+            false,
             rules
         );
 
@@ -117,6 +124,7 @@ public class WorldSpawner : MonoBehaviour
         bool nearWaterOnly,
         bool ignoreClearance,
         bool isPickupObject,
+        bool denseGroundCover,
         GenerationRules rules)
     {
         if (prefabs == null || prefabs.Length == 0 || count <= 0)
@@ -126,6 +134,9 @@ public class WorldSpawner : MonoBehaviour
         }
 
         int spawned = 0;
+        int attemptsPerObject = denseGroundCover
+            ? Mathf.Max(5, denseGroundCoverAttemptsPerObject)
+            : Mathf.Max(10, maxAttemptsPerObject);
 
         for (int i = 0; i < count; i++)
         {
@@ -137,6 +148,8 @@ public class WorldSpawner : MonoBehaviour
                 nearWaterOnly,
                 ignoreClearance,
                 isPickupObject,
+                denseGroundCover,
+                attemptsPerObject,
                 rules
             );
 
@@ -155,29 +168,27 @@ public class WorldSpawner : MonoBehaviour
         bool nearWaterOnly,
         bool ignoreClearance,
         bool isPickupObject,
+        bool denseGroundCover,
+        int attemptsPerObject,
         GenerationRules rules)
     {
         Terrain terrain = terrainGenerator.ActiveTerrain;
         TerrainData data = terrain.terrainData;
         Vector3 terrainPos = terrain.transform.position;
 
-        for (int attempt = 0; attempt < maxAttemptsPerObject; attempt++)
+        for (int attempt = 0; attempt < attemptsPerObject; attempt++)
         {
             Vector3 candidate = nearWaterOnly
                 ? GetRandomPointNearWater()
                 : GetRandomPointOnTerrain(data, terrainPos);
 
-            if (!IsValidDistanceFromSpawn(candidate, rules.safeRadius))
+            if (!denseGroundCoverIgnoresSafeRadius && !IsValidDistanceFromSpawn(candidate, rules.safeRadius))
                 continue;
 
-            if (!nearWaterOnly &&
-                waterController != null &&
-                waterController.IsInsideLake(candidate, rules.waterAvoidanceMargin))
+            if (!nearWaterOnly && waterController != null && waterController.IsInsideLake(candidate, rules.waterAvoidanceMargin))
                 continue;
 
-            if (nearWaterOnly &&
-                waterController != null &&
-                !waterController.IsNearLakeShore(candidate, 0.8f, 7.0f))
+            if (nearWaterOnly && waterController != null && !waterController.IsNearLakeShore(candidate, 0.9f, 8.0f))
                 continue;
 
             bool groundFound = terrainGenerator.TryGetTerrainPoint(
@@ -195,7 +206,7 @@ public class WorldSpawner : MonoBehaviour
                 continue;
 
             GameObject prefab = prefabs[rng.Next(0, prefabs.Length)];
-            SpawnObject(prefab, groundPoint, normal, scaleRange, alignToSurface, isPickupObject);
+            SpawnObject(prefab, groundPoint, normal, scaleRange, alignToSurface, isPickupObject, denseGroundCover);
             return true;
         }
 
@@ -220,12 +231,7 @@ public class WorldSpawner : MonoBehaviour
         {
             Vector3 candidate = GetRandomPointOnTerrain(data, terrainPos);
 
-            if (!terrainGenerator.TryGetTerrainPoint(
-                    candidate,
-                    28f,
-                    out Vector3 groundPoint,
-                    out Vector3 normal,
-                    out float slope))
+            if (!terrainGenerator.TryGetTerrainPoint(candidate, 28f, out Vector3 groundPoint, out Vector3 normal, out float slope))
                 continue;
 
             GameObject prefab = prefabs[rng.Next(0, prefabs.Length)];
@@ -265,11 +271,7 @@ public class WorldSpawner : MonoBehaviour
         WaterController.LakeData lake = waterController.CurrentLake;
 
         float angle = RandomRange(0f, Mathf.PI * 2f);
-
-        float radius = RandomRange(
-            lake.radius + 1.2f,
-            lake.radius + 5.0f
-        );
+        float radius = RandomRange(lake.radius + 1.4f, lake.radius + 6.5f);
 
         float x = lake.center.x + Mathf.Cos(angle) * radius;
         float z = lake.center.z + Mathf.Sin(angle) * radius;
@@ -307,7 +309,8 @@ public class WorldSpawner : MonoBehaviour
         Vector3 normal,
         Vector2 scaleRange,
         bool alignToSurface,
-        bool isPickupObject)
+        bool isPickupObject,
+        bool denseGroundCover)
     {
         if (prefab == null)
             return;
@@ -319,18 +322,22 @@ public class WorldSpawner : MonoBehaviour
             : yRotation;
 
         Transform parent = propsRoot != null ? propsRoot : transform;
-
         float yOffset = isPickupObject ? pickupStoneYOffset : defaultYOffset;
 
-        GameObject instance = Instantiate(
-            prefab,
-            position + normal.normalized * yOffset,
-            rotation,
-            parent
-        );
+        GameObject instance = Instantiate(prefab, position + normal.normalized * yOffset, rotation, parent);
 
         float scale = RandomRange(scaleRange.x, scaleRange.y);
-        instance.transform.localScale *= scale;
+
+        if (isPickupObject)
+        {
+            // Pickup stones must appear small immediately. Some source prefabs have large authoring scale,
+            // so multiplying by the prefab scale causes the first spawn to be huge.
+            instance.transform.localScale = Vector3.one * scale;
+        }
+        else
+        {
+            instance.transform.localScale *= scale;
+        }
 
         instance.name = $"{prefab.name}_Generated";
 
