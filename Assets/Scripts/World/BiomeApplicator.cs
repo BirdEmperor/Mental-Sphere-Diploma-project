@@ -7,13 +7,22 @@ public class BiomeApplicator : MonoBehaviour
     [SerializeField] private Light directionalLight;
 
     [Header("Runtime Light Safety")]
+    [Tooltip("Keeps lighting from becoming extreme, but no longer darkens the whole scene aggressively.")]
     [SerializeField] private bool clampRuntimeLighting = true;
-    [SerializeField] private float maxDirectionalLightIntensity = 0.75f;
-    [SerializeField] private float lakeMaxDirectionalLightIntensity = 0.55f;
-    [SerializeField] private float maxReflectionIntensity = 0.45f;
-    [SerializeField] private float lakeReflectionIntensity = 0.22f;
-    [SerializeField] private float ambientColorMultiplier = 0.75f;
-    [SerializeField] private float lakeAmbientColorMultiplier = 0.52f;
+
+    [SerializeField] private float maxDirectionalLightIntensity = 1.05f;
+    [SerializeField] private float lakeMaxDirectionalLightIntensity = 0.90f;
+    [SerializeField] private float maxReflectionIntensity = 0.75f;
+    [SerializeField] private float lakeReflectionIntensity = 0.55f;
+    [SerializeField] private float ambientColorMultiplier = 1.00f;
+    [SerializeField] private float lakeAmbientColorMultiplier = 0.92f;
+
+    [Header("Biome Look Correction")]
+    [Tooltip("Adds a small brightness floor so generated locations do not look dead after anti-overexposure fixes.")]
+    [SerializeField] private bool applyMinimumAmbientBrightness = true;
+    [SerializeField] private float minimumAmbientChannel = 0.32f;
+    [SerializeField] private float lakeMinimumAmbientChannel = 0.38f;
+    [SerializeField] private bool keepSkyboxReflectionUsable = true;
 
     [Header("Skyboxes")]
     [SerializeField] private Material defaultMorningSkybox;
@@ -68,7 +77,7 @@ public class BiomeApplicator : MonoBehaviour
             if (ColorUtility.TryParseHtmlString(lighting.lightColor, out Color lightColor))
             {
                 if (clampRuntimeLighting)
-                    lightColor = ClampColorBrightness(lightColor, isLake ? 0.82f : 0.95f);
+                    lightColor = ClampColorBrightness(lightColor, isLake ? 1.00f : 1.00f);
 
                 directionalLight.color = lightColor;
             }
@@ -85,14 +94,28 @@ public class BiomeApplicator : MonoBehaviour
                 ambientColor.a = 1f;
             }
 
+            if (applyMinimumAmbientBrightness)
+            {
+                float minChannel = isLake ? lakeMinimumAmbientChannel : minimumAmbientChannel;
+                ambientColor.r = Mathf.Max(ambientColor.r, minChannel);
+                ambientColor.g = Mathf.Max(ambientColor.g, minChannel);
+                ambientColor.b = Mathf.Max(ambientColor.b, minChannel);
+                ambientColor.a = 1f;
+            }
+
             RenderSettings.ambientLight = ambientColor;
         }
 
         if (clampRuntimeLighting)
         {
-            RenderSettings.reflectionIntensity = isLake
+            float targetReflection = isLake
                 ? lakeReflectionIntensity
                 : Mathf.Min(RenderSettings.reflectionIntensity, maxReflectionIntensity);
+
+            if (keepSkyboxReflectionUsable)
+                targetReflection = Mathf.Max(targetReflection, isLake ? 0.35f : 0.25f);
+
+            RenderSettings.reflectionIntensity = targetReflection;
         }
     }
 
