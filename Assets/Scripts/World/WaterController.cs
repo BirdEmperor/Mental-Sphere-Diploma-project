@@ -14,29 +14,12 @@ public class WaterController : MonoBehaviour
     [Header("Water")]
     [SerializeField] private GameObject waterPrefab;
     [SerializeField] private Transform waterRoot;
-    [SerializeField] private Material waterMaterialOverride;
 
     [Tooltip("Negative value lowers water into the terrain depression.")]
     [SerializeField] private float waterYOffset = -0.08f;
 
     [Tooltip("Visible water diameter multiplier relative to waterRadius.")]
     [SerializeField] private float visibleDiameterMultiplier = 2.25f;
-
-    [Header("Water Visual Safety")]
-    [SerializeField] private bool forceMaterialOverride = true;
-    [SerializeField] private bool forceRuntimeUrpWaterMaterial = true;
-    [SerializeField] private bool reduceWaterBrightness = true;
-    [SerializeField] private Color fallbackWaterTint = new Color(0.16f, 0.46f, 0.62f, 0.64f);
-    [SerializeField] private float fallbackSmoothness = 0.28f;
-    [SerializeField] private float fallbackMetallic = 0f;
-
-    [Header("Runtime URP Water")]
-    [Tooltip("Used only when Force Runtime Urp Water Material is enabled. Keeps the water mesh/prefab, but replaces problematic shaders with a stable URP transparent material.")]
-    [SerializeField] private Color runtimeWaterColor = new Color(0.10f, 0.42f, 0.58f, 0.58f);
-    [SerializeField] private float runtimeSmoothness = 0.18f;
-    [SerializeField] private float runtimeMetallic = 0f;
-    [SerializeField] private bool preserveMainTextureFromSource = true;
-    [SerializeField] private bool preserveNormalMapFromSource = true;
 
     [Header("Audio")]
     [SerializeField] private AudioClip waterLoop;
@@ -45,7 +28,6 @@ public class WaterController : MonoBehaviour
 
     private GameObject currentWater;
     private AudioSource currentWaterAudio;
-    private Material runtimeWaterMaterial;
 
     public LakeData CurrentLake { get; private set; }
 
@@ -83,8 +65,6 @@ public class WaterController : MonoBehaviour
         currentWater = Instantiate(waterPrefab, waterCenter, Quaternion.identity, parent);
         currentWater.name = "Generated_Water";
 
-        ApplyWaterMaterials(currentWater);
-
         float desiredDiameter = config.waterRadius * visibleDiameterMultiplier;
         ResizeWaterByRendererBounds(currentWater, desiredDiameter);
 
@@ -101,151 +81,6 @@ public class WaterController : MonoBehaviour
         };
 
         Debug.Log($"[WaterController] Water created. Radius={config.waterRadius}, VisibleRadius={visibleRadius}, DesiredDiameter={desiredDiameter}");
-    }
-
-    private void ApplyWaterMaterials(GameObject waterObject)
-    {
-        if (waterObject == null)
-            return;
-
-        Renderer[] renderers = waterObject.GetComponentsInChildren<Renderer>(true);
-
-        if (renderers == null || renderers.Length == 0)
-        {
-            Debug.LogWarning("[WaterController] Water prefab has no renderers.");
-            return;
-        }
-
-        foreach (Renderer renderer in renderers)
-        {
-            if (renderer == null)
-                continue;
-
-            Material sourceMaterial = renderer.sharedMaterial;
-
-            if (sourceMaterial != null)
-                Debug.Log($"[WaterController] Source water shader: {sourceMaterial.shader.name}");
-
-            if (forceRuntimeUrpWaterMaterial)
-            {
-                renderer.sharedMaterial = BuildRuntimeUrpWaterMaterial(sourceMaterial);
-            }
-            else if (forceMaterialOverride && waterMaterialOverride != null)
-            {
-                renderer.sharedMaterial = waterMaterialOverride;
-            }
-
-            if (reduceWaterBrightness)
-                ClampWaterMaterial(renderer);
-
-            if (renderer.sharedMaterial != null)
-                Debug.Log($"[WaterController] Final water shader: {renderer.sharedMaterial.shader.name}");
-        }
-    }
-
-    private Material BuildRuntimeUrpWaterMaterial(Material sourceMaterial)
-    {
-        Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
-
-        if (urpLit == null)
-        {
-            Debug.LogWarning("[WaterController] URP Lit shader not found. Falling back to material override/source material.");
-            return waterMaterialOverride != null ? waterMaterialOverride : sourceMaterial;
-        }
-
-        if (runtimeWaterMaterial != null)
-            Destroy(runtimeWaterMaterial);
-
-        runtimeWaterMaterial = new Material(urpLit)
-        {
-            name = "Runtime_Stable_URP_Water"
-        };
-
-        SetupTransparentUrpMaterial(runtimeWaterMaterial);
-
-        runtimeWaterMaterial.SetColor("_BaseColor", runtimeWaterColor);
-        runtimeWaterMaterial.SetFloat("_Metallic", runtimeMetallic);
-        runtimeWaterMaterial.SetFloat("_Smoothness", runtimeSmoothness);
-
-        Texture mainTexture = TryGetTexture(sourceMaterial, "_BaseMap", "_MainTex", "_BaseColorMap");
-        Texture normalTexture = TryGetTexture(sourceMaterial, "_BumpMap", "_NormalMap", "_NormalTex");
-
-        if (preserveMainTextureFromSource && mainTexture != null)
-            runtimeWaterMaterial.SetTexture("_BaseMap", mainTexture);
-
-        if (preserveNormalMapFromSource && normalTexture != null)
-        {
-            runtimeWaterMaterial.SetTexture("_BumpMap", normalTexture);
-            runtimeWaterMaterial.EnableKeyword("_NORMALMAP");
-        }
-
-        return runtimeWaterMaterial;
-    }
-
-    private Texture TryGetTexture(Material material, params string[] propertyNames)
-    {
-        if (material == null || propertyNames == null)
-            return null;
-
-        foreach (string propertyName in propertyNames)
-        {
-            if (string.IsNullOrWhiteSpace(propertyName))
-                continue;
-
-            if (material.HasProperty(propertyName))
-            {
-                Texture texture = material.GetTexture(propertyName);
-
-                if (texture != null)
-                    return texture;
-            }
-        }
-
-        return null;
-    }
-
-    private void SetupTransparentUrpMaterial(Material material)
-    {
-        if (material == null)
-            return;
-
-        // URP Lit transparent setup.
-        material.SetFloat("_Surface", 1f);
-        material.SetFloat("_Blend", 0f);
-        material.SetFloat("_AlphaClip", 0f);
-        material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        material.SetFloat("_ZWrite", 0f);
-        material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Back);
-
-        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        material.DisableKeyword("_ALPHATEST_ON");
-        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-    }
-
-    private void ClampWaterMaterial(Renderer renderer)
-    {
-        if (renderer == null || renderer.sharedMaterial == null)
-            return;
-
-        Material material = renderer.material;
-
-        if (material.HasProperty("_BaseColor"))
-            material.SetColor("_BaseColor", fallbackWaterTint);
-        else if (material.HasProperty("_Color"))
-            material.SetColor("_Color", fallbackWaterTint);
-
-        if (material.HasProperty("_Smoothness"))
-            material.SetFloat("_Smoothness", fallbackSmoothness);
-
-        if (material.HasProperty("_Metallic"))
-            material.SetFloat("_Metallic", fallbackMetallic);
-
-        if (material.HasProperty("_EmissionColor"))
-            material.SetColor("_EmissionColor", Color.black);
-
-        if (material.HasProperty("_Alpha"))
-            material.SetFloat("_Alpha", fallbackWaterTint.a);
     }
 
     private void ResizeWaterByRendererBounds(GameObject waterObject, float desiredDiameter)
@@ -326,12 +161,6 @@ public class WaterController : MonoBehaviour
     {
         if (currentWater != null)
             Destroy(currentWater);
-
-        if (runtimeWaterMaterial != null)
-        {
-            Destroy(runtimeWaterMaterial);
-            runtimeWaterMaterial = null;
-        }
 
         currentWater = null;
         currentWaterAudio = null;
