@@ -14,12 +14,20 @@ public class WaterController : MonoBehaviour
     [Header("Water")]
     [SerializeField] private GameObject waterPrefab;
     [SerializeField] private Transform waterRoot;
+    [SerializeField] private Material waterMaterialOverride;
 
-    [Tooltip("Отрицательное значение утопит воду в углубление рельефа.")]
+    [Tooltip("Negative value lowers water into the terrain depression.")]
     [SerializeField] private float waterYOffset = -0.08f;
 
-    [Tooltip("Множитель видимого диаметра воды относительно waterRadius.")]
+    [Tooltip("Visible water diameter multiplier relative to waterRadius.")]
     [SerializeField] private float visibleDiameterMultiplier = 2.25f;
+
+    [Header("Water Visual Safety")]
+    [SerializeField] private bool forceMaterialOverride = true;
+    [SerializeField] private bool reduceWaterBrightness = true;
+    [SerializeField] private Color fallbackWaterTint = new Color(0.20f, 0.55f, 0.72f, 0.72f);
+    [SerializeField] private float fallbackSmoothness = 0.45f;
+    [SerializeField] private float fallbackMetallic = 0f;
 
     [Header("Audio")]
     [SerializeField] private AudioClip waterLoop;
@@ -60,11 +68,12 @@ public class WaterController : MonoBehaviour
         float waterY = terrainPos.y + config.waterLevel + waterYOffset;
 
         Vector3 waterCenter = new Vector3(centerX, waterY, centerZ);
-
         Transform parent = waterRoot != null ? waterRoot : transform;
 
         currentWater = Instantiate(waterPrefab, waterCenter, Quaternion.identity, parent);
         currentWater.name = "Generated_Water";
+
+        ApplyWaterMaterials(currentWater);
 
         float desiredDiameter = config.waterRadius * visibleDiameterMultiplier;
         ResizeWaterByRendererBounds(currentWater, desiredDiameter);
@@ -82,6 +91,53 @@ public class WaterController : MonoBehaviour
         };
 
         Debug.Log($"[WaterController] Water created. Radius={config.waterRadius}, VisibleRadius={visibleRadius}, DesiredDiameter={desiredDiameter}");
+    }
+
+    private void ApplyWaterMaterials(GameObject waterObject)
+    {
+        if (waterObject == null)
+            return;
+
+        Renderer[] renderers = waterObject.GetComponentsInChildren<Renderer>(true);
+
+        if (renderers == null || renderers.Length == 0)
+            return;
+
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null)
+                continue;
+
+            if (forceMaterialOverride && waterMaterialOverride != null)
+            {
+                renderer.sharedMaterial = waterMaterialOverride;
+            }
+
+            if (reduceWaterBrightness)
+                ClampWaterMaterial(renderer);
+        }
+    }
+
+    private void ClampWaterMaterial(Renderer renderer)
+    {
+        if (renderer == null || renderer.sharedMaterial == null)
+            return;
+
+        Material material = renderer.material;
+
+        if (material.HasProperty("_BaseColor"))
+            material.SetColor("_BaseColor", fallbackWaterTint);
+        else if (material.HasProperty("_Color"))
+            material.SetColor("_Color", fallbackWaterTint);
+
+        if (material.HasProperty("_Smoothness"))
+            material.SetFloat("_Smoothness", fallbackSmoothness);
+
+        if (material.HasProperty("_Metallic"))
+            material.SetFloat("_Metallic", fallbackMetallic);
+
+        if (material.HasProperty("_EmissionColor"))
+            material.SetColor("_EmissionColor", Color.black);
     }
 
     private void ResizeWaterByRendererBounds(GameObject waterObject, float desiredDiameter)
