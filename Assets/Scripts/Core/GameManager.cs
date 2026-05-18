@@ -20,6 +20,8 @@ public class GameManager : MonoBehaviour
 
     [Header("Player")]
     [SerializeField] private Transform xrOrigin;
+    [Tooltip("Optional. Assign Main Camera from XR Origin here. If empty, Camera.main will be used.")]
+    [SerializeField] private Transform playerView;
 
     [Header("Scene Roots")]
     [SerializeField] private GameObject hubRoot;
@@ -31,9 +33,11 @@ public class GameManager : MonoBehaviour
 
     [Header("Return Sphere")]
     [SerializeField] private GameObject returnSpherePrefab;
-    [SerializeField] private float returnSphereForwardDistance = 2.2f;
-    [SerializeField] private float returnSphereHeightOffset = 1.25f;
-    [SerializeField] private float returnSphereSideOffset = 0.7f;
+    [SerializeField] private float returnSphereForwardDistance = 1.0f;
+    [SerializeField] private float returnSphereHeightOffset = -0.15f;
+    [SerializeField] private float returnSphereSideOffset = 0.25f;
+    [SerializeField] private bool returnSphereFollowsPlayerHead = false;
+    [SerializeField] private bool forceReturnSphereKinematic = true;
 
     [Header("Generated Location Offset")]
     [SerializeField] private Vector3 baseLocationCenter = new Vector3(0f, 0f, 120f);
@@ -65,6 +69,8 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        ResolvePlayerView();
+
         if (locationRoot != null)
             locationRoot.SetActive(false);
 
@@ -82,6 +88,9 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("[GameManager] Player fell below safety limit. Returning to hub.");
             FinishCurrentSession();
         }
+
+        if (sessionActive && returnSphereFollowsPlayerHead)
+            UpdateReturnSpherePosition();
 
         if (!enableKeyboardTest)
             return;
@@ -273,6 +282,8 @@ public class GameManager : MonoBehaviour
 
         xrOrigin.position = spawnPosition;
         xrOrigin.rotation = Quaternion.identity;
+
+        ResolvePlayerView();
     }
 
     private void SpawnReturnSphereNearPlayer()
@@ -283,9 +294,11 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        if (xrOrigin == null)
+        Transform viewTransform = ResolvePlayerView();
+
+        if (viewTransform == null)
         {
-            Debug.LogWarning("[GameManager] XR Origin is not assigned. Cannot spawn return sphere.");
+            Debug.LogWarning("[GameManager] No player view or XR Origin found. Cannot spawn return sphere.");
             return;
         }
 
@@ -295,7 +308,35 @@ public class GameManager : MonoBehaviour
             spawnedReturnSphere = null;
         }
 
-        Vector3 forward = xrOrigin.forward;
+        Vector3 spawnPosition = CalculateReturnSpherePosition(viewTransform);
+        Quaternion spawnRotation = CalculateReturnSphereRotation(viewTransform);
+        Transform parent = locationRoot != null ? locationRoot.transform : null;
+
+        spawnedReturnSphere = Instantiate(returnSpherePrefab, spawnPosition, spawnRotation, parent);
+        spawnedReturnSphere.name = $"{returnSpherePrefab.name}_GeneratedReturnSphere";
+
+        LockReturnSpherePhysics(spawnedReturnSphere);
+
+        Debug.Log($"[GameManager] Return sphere spawned near player view at {spawnPosition}.");
+    }
+
+    private Transform ResolvePlayerView()
+    {
+        if (playerView != null)
+            return playerView;
+
+        if (Camera.main != null)
+        {
+            playerView = Camera.main.transform;
+            return playerView;
+        }
+
+        return xrOrigin;
+    }
+
+    private Vector3 CalculateReturnSpherePosition(Transform viewTransform)
+    {
+        Vector3 forward = viewTransform.forward;
         forward.y = 0f;
 
         if (forward.sqrMagnitude < 0.001f)
@@ -303,7 +344,7 @@ public class GameManager : MonoBehaviour
 
         forward.Normalize();
 
-        Vector3 right = xrOrigin.right;
+        Vector3 right = viewTransform.right;
         right.y = 0f;
 
         if (right.sqrMagnitude < 0.001f)
@@ -312,18 +353,61 @@ public class GameManager : MonoBehaviour
         right.Normalize();
 
         Vector3 spawnPosition =
-            xrOrigin.position +
+            viewTransform.position +
             forward * returnSphereForwardDistance +
-            right * returnSphereSideOffset +
-            Vector3.up * returnSphereHeightOffset;
+            right * returnSphereSideOffset;
 
-        Quaternion spawnRotation = Quaternion.LookRotation(-forward, Vector3.up);
-        Transform parent = locationRoot != null ? locationRoot.transform : null;
+        spawnPosition.y = viewTransform.position.y + returnSphereHeightOffset;
 
-        spawnedReturnSphere = Instantiate(returnSpherePrefab, spawnPosition, spawnRotation, parent);
-        spawnedReturnSphere.name = $"{returnSpherePrefab.name}_GeneratedReturnSphere";
+        return spawnPosition;
+    }
 
-        Debug.Log("[GameManager] Return sphere spawned near player.");
+    private Quaternion CalculateReturnSphereRotation(Transform viewTransform)
+    {
+        Vector3 forward = viewTransform.forward;
+        forward.y = 0f;
+
+        if (forward.sqrMagnitude < 0.001f)
+            forward = Vector3.forward;
+
+        forward.Normalize();
+
+        return Quaternion.LookRotation(-forward, Vector3.up);
+    }
+
+    private void UpdateReturnSpherePosition()
+    {
+        if (spawnedReturnSphere == null)
+            return;
+
+        Transform viewTransform = ResolvePlayerView();
+
+        if (viewTransform == null)
+            return;
+
+        spawnedReturnSphere.transform.SetPositionAndRotation(
+            CalculateReturnSpherePosition(viewTransform),
+            CalculateReturnSphereRotation(viewTransform)
+        );
+
+        LockReturnSpherePhysics(spawnedReturnSphere);
+    }
+
+    private void LockReturnSpherePhysics(GameObject sphereObject)
+    {
+        if (sphereObject == null || !forceReturnSphereKinematic)
+            return;
+
+        Rigidbody rb = sphereObject.GetComponent<Rigidbody>();
+
+        if (rb == null)
+            rb = sphereObject.AddComponent<Rigidbody>();
+
+        rb.useGravity = false;
+        rb.isKinematic = true;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        rb.constraints = RigidbodyConstraints.FreezeAll;
     }
 
     public void RegisterInteraction(string eventName)
