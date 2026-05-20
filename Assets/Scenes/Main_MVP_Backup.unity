@@ -2402,7 +2402,7 @@ MonoBehaviour:
   returnSphereSideOffset: 0.7
   baseLocationCenter: {x: 0, y: 0, z: 120}
   randomLocationOffsetRadius: 20
-  enableKeyboardTest: 0
+  enableKeyboardTest: 1
   testSphereColor: yellow
   allowKeyboardGenerationDuringSession: 0
   playerFallResetY: -10
@@ -3029,7 +3029,7 @@ MonoBehaviour:
   waterRoot: {fileID: 1626542200}
   waterYOffset: -0.08
   visibleDiameterMultiplier: 2
-  waterLoop: {fileID: 8300000, guid: 054205af35efcb942be9610445479a7c, type: 3}
+  waterLoop: {fileID: 8300000, guid: 21538f6160ff48040a8488deb4ed6d5e, type: 3}
   waterVolume: 0.35
   maxAudioDistance: 25
 --- !u!1 &1588532010
@@ -3563,7 +3563,7 @@ MonoBehaviour:
   fieldSkybox: {fileID: 2100000, guid: 416ee80c6a09f9b4fb43d9aa43f4a057, type: 2}
   eveningSkybox: {fileID: 2100000, guid: de1d750fefeeac642bf9b11a3978ccf5, type: 2}
   ambientAudioSource: {fileID: 143514593}
-  lakeAmbient: {fileID: 8300000, guid: 749428170bd956149a4ede7c65dbb8b6, type: 3}
+  lakeAmbient: {fileID: 8300000, guid: bec1cfb465efc7a41bd5ccbac5b6f2a2, type: 3}
   forestAmbient: {fileID: 8300000, guid: bec1cfb465efc7a41bd5ccbac5b6f2a2, type: 3}
   fieldAmbient: {fileID: 8300000, guid: 660790bb19a97eb4581a05d90c81f369, type: 3}
   nightAmbient: {fileID: 8300000, guid: 2cbeb5b18dd7a4940801811781c0e0d8, type: 3}
