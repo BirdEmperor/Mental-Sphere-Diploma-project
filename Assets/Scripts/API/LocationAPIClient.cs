@@ -10,6 +10,13 @@ public class LocationApiClient : MonoBehaviour
     [SerializeField] private string userId = "default";
     [SerializeField] private float timeoutSeconds = 5f;
 
+    [Header("Mode")]
+    [Tooltip("If ON, Unity will ignore the server and use the Local Profiles JSON asset. Use this for demo/testing without Docker/FastAPI.")]
+    [SerializeField] private bool useLocalTestProfilesWithoutServer = false;
+
+    [Tooltip("JSON file with local generation profiles. Expected root object: { \"profiles\": [ ... ] }.")]
+    [SerializeField] private TextAsset localProfilesJson;
+
     [Header("Failure Mode")]
     [Tooltip("If OFF, generation is canceled when server is unavailable.")]
     [SerializeField] private bool useFallbackOnFailure = false;
@@ -19,10 +26,35 @@ public class LocationApiClient : MonoBehaviour
 
     public string ServerBaseUrl => serverBaseUrl;
     public string UserId => userId;
+    public bool UseLocalTestProfilesWithoutServer => useLocalTestProfilesWithoutServer;
 
     public IEnumerator FetchGenerationProfile(string sphereColor, Action<GenerationResponse> onSuccess)
     {
         string color = NormalizeColor(sphereColor);
+
+        if (useLocalTestProfilesWithoutServer)
+        {
+            Debug.LogWarning($"[LocationApiClient] Local test mode enabled. Server request skipped for color '{color}'.");
+
+            GenerationResponse localProfile = LocalGenerationProfileDatabase.TryGetProfile(localProfilesJson, color);
+
+            if (localProfile == null)
+            {
+                Debug.LogError($"[LocationApiClient] Local test profile for color '{color}' was not found or could not be parsed.");
+                onSuccess?.Invoke(null);
+                yield break;
+            }
+
+            EnsureDefaults(localProfile);
+
+            Debug.Log(
+                $"[LocationApiClient] Local profile loaded: color={localProfile.sphereColor}, profile={localProfile.profileId}, biome={localProfile.biome}, seed={localProfile.seed}"
+            );
+
+            onSuccess?.Invoke(localProfile);
+            yield break;
+        }
+
         string url = $"{serverBaseUrl.TrimEnd('/')}/generate/{color}?user_id={userId}";
 
         using UnityWebRequest request = UnityWebRequest.Get(url);
