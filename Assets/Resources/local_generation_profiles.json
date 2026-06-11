@@ -1,0 +1,256 @@
+{
+  "profiles": [
+    {
+      "profileId": "local_blue_lake",
+      "sphereColor": "blue",
+      "seed": 120045,
+      "biome": "lake",
+      "terrain": {
+        "size": 90.0,
+        "terrainHeight": 7.0,
+        "heightMultiplier": 0.08,
+        "noiseScale": 2.2,
+        "flattenSpawnRadius": 10.0,
+        "waterLevel": 1.05,
+        "waterRadius": 24.0,
+        "waterCenterX": 0.5,
+        "waterCenterZ": 0.5,
+        "lakeDepth": 2.2
+      },
+      "objects": {
+        "treeCount": 520,
+        "rockCount": 55,
+        "cliffCount": 0,
+        "bushCount": 80,
+        "grassPatchCount": 850,
+        "flowerPatchCount": 120,
+        "reedCount": 160,
+        "branchCount": 35
+      },
+      "rules": {
+        "safeRadius": 7.0,
+        "minObjectDistance": 0.45,
+        "waterAvoidanceMargin": 2.2
+      },
+      "atmosphere": {
+        "timeOfDay": "morning",
+        "fogColor": "#BFDDEA",
+        "fogStart": 28.0,
+        "fogEnd": 105.0,
+        "lightIntensity": 0.85
+      },
+      "audio": {
+        "ambientSound": "lake",
+        "waterSound": "lake",
+        "waterEnabled": true,
+        "windIntensity": 0.18
+      },
+      "textures": {
+        "terrainTextureId": "grass_soft",
+        "grassLayerIndex": 0,
+        "sandLayerIndex": 1,
+        "rockLayerIndex": 2,
+        "sandShoreWidth": 0.72,
+        "rockShoreWidth": 0.92,
+        "steepRockStart": 32.0,
+        "steepRockFull": 44.0,
+        "lowHeightSandOffset": 0.03,
+        "waterTextureId": "lake_clear",
+        "skyboxId": "lake_morning"
+      },
+      "lighting": {
+        "timeOfDay": "morning",
+        "lightIntensity": 0.85,
+        "lightRotationX": 38.0,
+        "lightRotationY": -32.0,
+        "lightColor": "#FFF0D2",
+        "ambientColor": "#8FB3C8"
+      },
+      "skybox": {
+        "skyboxId": "lake_morning",
+        "fogColor": "#BFDDEA",
+        "fogStart": 28.0,
+        "fogEnd": 105.0
+      },
+      "effects": {
+        "fireflyCount": 45,
+        "godRayCount": 0,
+        "mistCount": 18,
+        "floatingLeavesCount": 4,
+        "floatingPetalsCount": 2,
+        "butterflySpawnAreas": 0
+      },
+      "interactives": {
+        "pickupStoneCount": 32,
+        "pickupBranchCount": 0,
+        "collectibleLeafCount": 0
+      }
+    },
+    {
+      "profileId": "local_green_forest",
+      "sphereColor": "green",
+      "seed": 330078,
+      "biome": "forest",
+      "terrain": {
+        "size": 95.0,
+        "terrainHeight": 6.0,
+        "heightMultiplier": 0.075,
+        "noiseScale": 2.0,
+        "flattenSpawnRadius": 9.0,
+        "waterLevel": 0.0,
+        "waterRadius": 0.0,
+        "waterCenterX": 0.5,
+        "waterCenterZ": 0.5,
+        "lakeDepth": 0.0
+      },
+      "objects": {
+        "treeCount": 900,
+        "rockCount": 40,
+        "cliffCount": 0,
+        "bushCount": 180,
+        "grassPatchCount": 1400,
+        "flowerPatchCount": 180,
+        "reedCount": 0,
+        "branchCount": 120
+      },
+      "rules": {
+        "safeRadius": 7.0,
+        "minObjectDistance": 0.35,
+        "waterAvoidanceMargin": 0.0
+      },
+      "atmosphere": {
+        "timeOfDay": "day",
+        "fogColor": "#B8D6C2",
+        "fogStart": 24.0,
+        "fogEnd": 95.0,
+        "lightIntensity": 0.78
+      },
+      "audio": {
+        "ambientSound": "forest",
+        "waterSound": "none",
+        "waterEnabled": false,
+        "windIntensity": 0.28
+      },
+      "textures": {
+        "terrainTextureId": "forest_grass",
+        "grassLayerIndex": 0,
+        "sandLayerIndex": 1,
+        "rockLayerIndex": 2,
+        "steepRockStart": 34.0,
+        "steepRockFull": 46.0,
+        "waterTextureId": "none",
+        "skyboxId": "forest_day"
+      },
+      "lighting": {
+        "timeOfDay": "day",
+        "lightIntensity": 0.78,
+        "lightRotationX": 46.0,
+        "lightRotationY": -38.0,
+        "lightColor": "#FFF4D8",
+        "ambientColor": "#8CAA8A"
+      },
+      "skybox": {
+        "skyboxId": "forest_day",
+        "fogColor": "#B8D6C2",
+        "fogStart": 24.0,
+        "fogEnd": 95.0
+      },
+      "effects": {
+        "fireflyCount": 20,
+        "godRayCount": 12,
+        "mistCount": 10,
+        "floatingLeavesCount": 8,
+        "floatingPetalsCount": 0,
+        "butterflySpawnAreas": 0
+      },
+      "interactives": {
+        "pickupStoneCount": 0,
+        "pickupBranchCount": 35,
+        "collectibleLeafCount": 25
+      }
+    },
+    {
+      "profileId": "local_yellow_flower_field",
+      "sphereColor": "yellow",
+      "seed": 780112,
+      "biome": "field",
+      "terrain": {
+        "size": 100.0,
+        "terrainHeight": 4.5,
+        "heightMultiplier": 0.045,
+        "noiseScale": 1.7,
+        "flattenSpawnRadius": 10.0,
+        "waterLevel": 0.0,
+        "waterRadius": 0.0,
+        "waterCenterX": 0.5,
+        "waterCenterZ": 0.5,
+        "lakeDepth": 0.0
+      },
+      "objects": {
+        "treeCount": 60,
+        "rockCount": 18,
+        "cliffCount": 0,
+        "bushCount": 0,
+        "grassPatchCount": 900,
+        "flowerPatchCount": 13000,
+        "reedCount": 0,
+        "branchCount": 0
+      },
+      "rules": {
+        "safeRadius": 8.0,
+        "minObjectDistance": 0.18,
+        "waterAvoidanceMargin": 0.0
+      },
+      "atmosphere": {
+        "timeOfDay": "warm_day",
+        "fogColor": "#FFE6B8",
+        "fogStart": 35.0,
+        "fogEnd": 130.0,
+        "lightIntensity": 0.9
+      },
+      "audio": {
+        "ambientSound": "field",
+        "waterSound": "none",
+        "waterEnabled": false,
+        "windIntensity": 0.22
+      },
+      "textures": {
+        "terrainTextureId": "flower_field_grass",
+        "grassLayerIndex": 0,
+        "sandLayerIndex": 1,
+        "rockLayerIndex": 2,
+        "steepRockStart": 36.0,
+        "steepRockFull": 48.0,
+        "waterTextureId": "none",
+        "skyboxId": "field_warm"
+      },
+      "lighting": {
+        "timeOfDay": "warm_day",
+        "lightIntensity": 0.9,
+        "lightRotationX": 42.0,
+        "lightRotationY": -25.0,
+        "lightColor": "#FFE7A8",
+        "ambientColor": "#D0B985"
+      },
+      "skybox": {
+        "skyboxId": "field_warm",
+        "fogColor": "#FFE6B8",
+        "fogStart": 35.0,
+        "fogEnd": 130.0
+      },
+      "effects": {
+        "fireflyCount": 10,
+        "godRayCount": 4,
+        "mistCount": 4,
+        "floatingLeavesCount": 0,
+        "floatingPetalsCount": 6,
+        "butterflySpawnAreas": 1
+      },
+      "interactives": {
+        "pickupStoneCount": 0,
+        "pickupBranchCount": 0,
+        "collectibleLeafCount": 0
+      }
+    }
+  ]
+}

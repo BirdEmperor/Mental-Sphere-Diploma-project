@@ -24,17 +24,27 @@ public class WorldSpawner : MonoBehaviour
     [SerializeField] private GameObject[] floatingLeavesPrefabs;
     [SerializeField] private GameObject[] floatingPetalsPrefabs;
     [SerializeField] private GameObject[] butterflyAreaPrefabs;
+    [SerializeField] private GameObject[] godRayPrefabs;
 
     [Header("Generation")]
     [SerializeField] private int maxAttemptsPerObject = 120;
     [SerializeField] private float edgePadding = 3f;
     [SerializeField] private float defaultYOffset = 0f;
     [SerializeField] private float pickupStoneYOffset = 0.18f;
+    [SerializeField] private float pickupStoneMass = 0.12f;
+    [SerializeField] private bool spawnCliffsNearEdges = true;
+    [SerializeField] private float cliffEdgeBandWidth = 12f;
 
     [Header("Dense Ground Cover")]
     [Tooltip("Grass/flowers use more forgiving placement because they are decorative ground cover.")]
     [SerializeField] private int denseGroundCoverAttemptsPerObject = 35;
     [SerializeField] private bool denseGroundCoverIgnoresSafeRadius = false;
+
+    [Header("Branch Interaction")]
+    [SerializeField] private bool makeBranchesGrabbable = true;
+    [SerializeField] private float branchMass = 0.18f;
+    [SerializeField] private float branchColliderRadius = 0.16f;
+    [SerializeField] private Vector3 branchColliderCenter = new Vector3(0f, 0.10f, 0f);
 
     [Header("Scale")]
     [SerializeField] private Vector2 treeScale = new Vector2(0.55f, 0.90f);
@@ -42,10 +52,10 @@ public class WorldSpawner : MonoBehaviour
     [SerializeField] private Vector2 cliffScale = new Vector2(0.55f, 0.95f);
     [SerializeField] private Vector2 bushScale = new Vector2(0.50f, 0.85f);
     [SerializeField] private Vector2 grassScale = new Vector2(0.85f, 1.45f);
-    [SerializeField] private Vector2 flowerScale = new Vector2(0.75f, 1.35f);
+    [SerializeField] private Vector2 flowerScale = new Vector2(0.95f, 1.65f);
     [SerializeField] private Vector2 reedScale = new Vector2(0.70f, 1.25f);
     [SerializeField] private Vector2 branchScale = new Vector2(0.16f, 0.34f);
-    [SerializeField] private Vector2 pickupStoneScale = new Vector2(0.035f, 0.075f);
+    [SerializeField] private Vector2 pickupStoneScale = new Vector2(0.16f, 0.30f);
     [SerializeField] private Vector2 effectScale = new Vector2(0.35f, 0.65f);
 
     private RuntimeTerrainGenerator terrainGenerator;
@@ -80,18 +90,18 @@ public class WorldSpawner : MonoBehaviour
 
         bool hasWater = response.audio != null && response.audio.waterEnabled;
 
-        SpawnCategory("Trees", treePrefabs, counts.treeCount, rules.treeMaxSlope, treeScale, false, false, false, false, false, rules);
-        SpawnCategory("Rocks", rockPrefabs, counts.rockCount, rules.rockMaxSlope, rockScale, true, false, false, false, false, rules);
-        SpawnCategory("Branches", branchPrefabs, counts.branchCount, rules.rockMaxSlope, branchScale, true, false, false, false, false, rules);
+        SpawnCategory("Trees", treePrefabs, counts.treeCount, rules.treeMaxSlope, treeScale, false, false, false, false, false, false, false, rules);
+        SpawnCategory("Rocks", rockPrefabs, counts.rockCount, rules.rockMaxSlope, rockScale, true, false, false, false, false, false, false, rules);
+        SpawnCategory("Branches", branchPrefabs, counts.branchCount, rules.rockMaxSlope, branchScale, true, false, false, false, true, false, false, rules);
 
-        SpawnCategory("Cliffs", cliffPrefabs, counts.cliffCount, rules.cliffMaxSlope, cliffScale, false, false, false, false, false, rules);
-        SpawnCategory("Bushes", bushPrefabs, counts.bushCount, rules.bushMaxSlope, bushScale, false, false, false, false, false, rules);
+        SpawnCategory("Cliffs", cliffPrefabs, counts.cliffCount, rules.cliffMaxSlope, cliffScale, false, false, false, false, false, false, spawnCliffsNearEdges, rules);
+        SpawnCategory("Bushes", bushPrefabs, counts.bushCount, rules.bushMaxSlope, bushScale, false, false, false, false, false, false, false, rules);
 
-        SpawnCategory("Grass", grassPatchPrefabs, counts.grassPatchCount, rules.grassMaxSlope, grassScale, false, false, true, false, true, rules);
-        SpawnCategory("Flowers", flowerPatchPrefabs, counts.flowerPatchCount, rules.flowerMaxSlope, flowerScale, false, false, true, false, true, rules);
+        SpawnCategory("Grass", grassPatchPrefabs, counts.grassPatchCount, rules.grassMaxSlope, grassScale, false, false, true, false, false, true, false, rules);
+        SpawnCategory("Flowers", flowerPatchPrefabs, counts.flowerPatchCount, rules.flowerMaxSlope, flowerScale, false, false, true, false, false, true, false, rules);
 
         if (hasWater)
-            SpawnCategory("Reeds", reedPrefabs, counts.reedCount, rules.grassMaxSlope, reedScale, false, true, true, false, true, rules);
+            SpawnCategory("Reeds", reedPrefabs, counts.reedCount, rules.grassMaxSlope, reedScale, false, true, true, false, false, true, false, rules);
 
         SpawnCategory(
             "PickupStones",
@@ -104,12 +114,15 @@ public class WorldSpawner : MonoBehaviour
             false,
             true,
             false,
+            false,
+            false,
             rules
         );
 
         SpawnDecorEffects("FloatingLeaves", floatingLeavesPrefabs, effects.floatingLeavesCount, 1.8f, 3.5f);
         SpawnDecorEffects("FloatingPetals", floatingPetalsPrefabs, effects.floatingPetalsCount, 1.5f, 3.0f);
         SpawnDecorEffects("Butterflies", butterflyAreaPrefabs, effects.butterflySpawnAreas, 0.3f, 1.2f);
+        SpawnDecorEffects("GodRays", godRayPrefabs, effects.godRayCount, 1.2f, 2.6f);
 
         Debug.Log("[WorldSpawner] World objects generated.");
     }
@@ -124,7 +137,9 @@ public class WorldSpawner : MonoBehaviour
         bool nearWaterOnly,
         bool ignoreClearance,
         bool isPickupObject,
+        bool isBranchObject,
         bool denseGroundCover,
+        bool nearEdgeOnly,
         GenerationRules rules)
     {
         if (prefabs == null || prefabs.Length == 0 || count <= 0)
@@ -148,7 +163,9 @@ public class WorldSpawner : MonoBehaviour
                 nearWaterOnly,
                 ignoreClearance,
                 isPickupObject,
+                isBranchObject,
                 denseGroundCover,
+                nearEdgeOnly,
                 attemptsPerObject,
                 rules
             );
@@ -168,7 +185,9 @@ public class WorldSpawner : MonoBehaviour
         bool nearWaterOnly,
         bool ignoreClearance,
         bool isPickupObject,
+        bool isBranchObject,
         bool denseGroundCover,
+        bool nearEdgeOnly,
         int attemptsPerObject,
         GenerationRules rules)
     {
@@ -180,7 +199,9 @@ public class WorldSpawner : MonoBehaviour
         {
             Vector3 candidate = nearWaterOnly
                 ? GetRandomPointNearWater()
-                : GetRandomPointOnTerrain(data, terrainPos);
+                : nearEdgeOnly
+                    ? GetRandomPointNearEdge(data, terrainPos)
+                    : GetRandomPointOnTerrain(data, terrainPos);
 
             if (!denseGroundCoverIgnoresSafeRadius && !IsValidDistanceFromSpawn(candidate, rules.safeRadius))
                 continue;
@@ -206,7 +227,7 @@ public class WorldSpawner : MonoBehaviour
                 continue;
 
             GameObject prefab = prefabs[rng.Next(0, prefabs.Length)];
-            SpawnObject(prefab, groundPoint, normal, scaleRange, alignToSurface, isPickupObject, denseGroundCover);
+            SpawnObject(prefab, groundPoint, normal, scaleRange, alignToSurface, isPickupObject, isBranchObject, denseGroundCover);
             return true;
         }
 
@@ -256,6 +277,37 @@ public class WorldSpawner : MonoBehaviour
     {
         float x = RandomRange(terrainPos.x + edgePadding, terrainPos.x + data.size.x - edgePadding);
         float z = RandomRange(terrainPos.z + edgePadding, terrainPos.z + data.size.z - edgePadding);
+
+        return new Vector3(x, 0f, z);
+    }
+
+    private Vector3 GetRandomPointNearEdge(TerrainData data, Vector3 terrainPos)
+    {
+        float band = Mathf.Clamp(cliffEdgeBandWidth, edgePadding, Mathf.Min(data.size.x, data.size.z) * 0.45f);
+        float minX = terrainPos.x + edgePadding;
+        float maxX = terrainPos.x + data.size.x - edgePadding;
+        float minZ = terrainPos.z + edgePadding;
+        float maxZ = terrainPos.z + data.size.z - edgePadding;
+
+        int side = rng.Next(0, 4);
+        float x = RandomRange(minX, maxX);
+        float z = RandomRange(minZ, maxZ);
+
+        switch (side)
+        {
+            case 0:
+                x = RandomRange(minX, Mathf.Min(minX + band, maxX));
+                break;
+            case 1:
+                x = RandomRange(Mathf.Max(maxX - band, minX), maxX);
+                break;
+            case 2:
+                z = RandomRange(minZ, Mathf.Min(minZ + band, maxZ));
+                break;
+            default:
+                z = RandomRange(Mathf.Max(maxZ - band, minZ), maxZ);
+                break;
+        }
 
         return new Vector3(x, 0f, z);
     }
@@ -310,6 +362,7 @@ public class WorldSpawner : MonoBehaviour
         Vector2 scaleRange,
         bool alignToSurface,
         bool isPickupObject,
+        bool isBranchObject,
         bool denseGroundCover)
     {
         if (prefab == null)
@@ -343,6 +396,8 @@ public class WorldSpawner : MonoBehaviour
 
         if (isPickupObject)
             ConfigurePickupPhysics(instance);
+        else if (isBranchObject && makeBranchesGrabbable)
+            ConfigureBranchPhysics(instance);
     }
 
     private void ConfigurePickupPhysics(GameObject instance)
@@ -356,6 +411,7 @@ public class WorldSpawner : MonoBehaviour
 
         rb.useGravity = true;
         rb.isKinematic = false;
+        rb.mass = pickupStoneMass;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.linearVelocity = Vector3.zero;
@@ -391,18 +447,77 @@ public class WorldSpawner : MonoBehaviour
         if (reset == null)
             instance.AddComponent<ResetIfFallen>();
 
-        ReturnToStartAfterRelease returner = instance.GetComponent<ReturnToStartAfterRelease>();
+        var grab = instance.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+        if (grab == null)
+            instance.AddComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
 
-        if (returner == null && instance.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>() != null)
+        ReturnToStartAfterRelease returner = instance.GetComponent<ReturnToStartAfterRelease>();
+        if (returner == null)
             returner = instance.AddComponent<ReturnToStartAfterRelease>();
 
-        if (returner != null)
-            returner.SetCurrentTransformAsReturnPoint();
+        returner.SetCurrentTransformAsReturnPoint();
 
         ThrowableStoneCounter counter = instance.GetComponent<ThrowableStoneCounter>();
-
-        if (counter == null && instance.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>() != null)
+        if (counter == null)
             instance.AddComponent<ThrowableStoneCounter>();
+    }
+
+    private void ConfigureBranchPhysics(GameObject instance)
+    {
+        if (instance == null)
+            return;
+
+        Rigidbody rb = instance.GetComponent<Rigidbody>();
+        if (rb == null)
+            rb = instance.AddComponent<Rigidbody>();
+
+        rb.useGravity = true;
+        rb.isKinematic = false;
+        rb.mass = branchMass;
+        rb.linearDamping = 0.08f;
+        rb.angularDamping = 0.08f;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        Collider[] colliders = instance.GetComponentsInChildren<Collider>();
+
+        if (colliders == null || colliders.Length == 0)
+        {
+            SphereCollider sphereCollider = instance.AddComponent<SphereCollider>();
+            sphereCollider.center = branchColliderCenter;
+            sphereCollider.radius = branchColliderRadius;
+            sphereCollider.isTrigger = false;
+        }
+        else
+        {
+            foreach (Collider collider in colliders)
+            {
+                if (collider == null)
+                    continue;
+
+                collider.isTrigger = false;
+
+                MeshCollider meshCollider = collider as MeshCollider;
+                if (meshCollider != null)
+                    meshCollider.convex = true;
+            }
+        }
+
+        var grab = instance.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+        if (grab == null)
+            instance.AddComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+
+        ResetIfFallen reset = instance.GetComponent<ResetIfFallen>();
+        if (reset == null)
+            instance.AddComponent<ResetIfFallen>();
+
+        ReturnToStartAfterRelease returner = instance.GetComponent<ReturnToStartAfterRelease>();
+        if (returner == null)
+            returner = instance.AddComponent<ReturnToStartAfterRelease>();
+
+        returner.SetCurrentTransformAsReturnPoint();
     }
 
     private float RandomRange(float min, float max)

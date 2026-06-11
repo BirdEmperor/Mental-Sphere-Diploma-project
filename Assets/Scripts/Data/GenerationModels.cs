@@ -132,6 +132,7 @@ public class EffectCounts
     public int floatingLeavesCount = 0;
     public int floatingPetalsCount = 0;
     public int butterflySpawnAreas = 0;
+    public int godRayCount = 0;
 }
 
 [Serializable]

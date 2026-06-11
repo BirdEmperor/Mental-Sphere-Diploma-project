@@ -8,7 +8,7 @@ public class RuntimeTerrainGenerator : MonoBehaviour
     [SerializeField] private int heightmapResolution = 129;
 
     [Header("Terrain Layers")]
-    [Tooltip("0 = Grass, 1 = Sand/Dirt/Path, 2 = Rock.")]
+    [Tooltip("0 = Grass, 1 = forest/soft ground, 2 = rock. Profiles keep grass dominant for calmer VR landscapes.")]
     [SerializeField] private TerrainLayer[] terrainLayers;
 
     [Header("Land Shape")]
@@ -311,21 +311,21 @@ public class RuntimeTerrainGenerator : MonoBehaviour
 
                     if (distance < lakeRadiusNormalized * textures.sandShoreWidth)
                     {
-                        weights[grassIndex] = 0.08f;
-                        weights[sandIndex] = 0.86f;
-                        weights[rockIndex] = 0.06f;
+                        weights[grassIndex] = 0.46f;
+                        weights[sandIndex] = 0.46f;
+                        weights[rockIndex] = 0.08f;
                     }
                     else if (distance < lakeRadiusNormalized * textures.rockShoreWidth)
                     {
-                        weights[grassIndex] = 0.55f;
-                        weights[sandIndex] = 0.25f;
-                        weights[rockIndex] = 0.20f;
+                        weights[grassIndex] = 0.78f;
+                        weights[sandIndex] = 0.14f;
+                        weights[rockIndex] = 0.08f;
                     }
 
                     if (height < config.waterLevel + textures.lowHeightSandOffset)
                     {
-                        weights[grassIndex] = Mathf.Min(weights[grassIndex], 0.22f);
-                        weights[sandIndex] = Mathf.Max(weights[sandIndex], 0.68f);
+                        weights[grassIndex] = Mathf.Max(weights[grassIndex], 0.38f);
+                        weights[sandIndex] = Mathf.Max(weights[sandIndex], 0.50f);
                     }
                 }
 

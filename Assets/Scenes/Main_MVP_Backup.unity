@@ -455,9 +455,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3b4d79cadff8df43abbc405666e4aa0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocationApiClient
-  serverBaseUrl: http://127.0.0.1:8000
+  serverBaseUrl: https://mental-sphere-server.onrender.com
   userId: default
   timeoutSeconds: 5
+  useLocalTestProfilesWithoutServer: 0
+  localProfilesJson: {fileID: 4900000, guid: 585045c71ac1ae641b6abe814e55e13e, type: 3}
   useFallbackOnFailure: 1
   useMinimalEmergencyFallback: 1
 --- !u!4 &195817602
@@ -666,21 +668,30 @@ MonoBehaviour:
   - {fileID: 3053860551121916404, guid: abe084a06ec72144f8c140261b683ee0, type: 3}
   butterflyAreaPrefabs:
   - {fileID: 3171154537923913090, guid: a379fd3487a26444dbdc8de46d7bd572, type: 3}
-  maxAttemptsPerObject: 30
-  edgePadding: 4
+  godRayPrefabs:
+  - {fileID: 2076003895308449357, guid: 2f8e0aa312b32ee4fab7ba2c2845e399, type: 3}
+  maxAttemptsPerObject: 120
+  edgePadding: 6
   defaultYOffset: 0
   pickupStoneYOffset: 0.25
+  pickupStoneMass: 0.12
+  spawnCliffsNearEdges: 1
+  cliffEdgeBandWidth: 14
   denseGroundCoverAttemptsPerObject: 35
   denseGroundCoverIgnoresSafeRadius: 0
+  makeBranchesGrabbable: 1
+  branchMass: 0.18
+  branchColliderRadius: 0.16
+  branchColliderCenter: {x: 0, y: 0.1, z: 0}
   treeScale: {x: 0.45, y: 0.75}
-  rockScale: {x: 0.25, y: 0.55}
-  cliffScale: {x: 0.45, y: 0.85}
+  rockScale: {x: 0.32, y: 0.72}
+  cliffScale: {x: 0.75, y: 1.35}
   bushScale: {x: 0.45, y: 0.8}
   grassScale: {x: 0.6, y: 1.1}
-  flowerScale: {x: 0.55, y: 1}
+  flowerScale: {x: 0.95, y: 1.65}
   reedScale: {x: 0.6, y: 1.1}
-  branchScale: {x: 0.18, y: 0.38}
-  pickupStoneScale: {x: 0.2, y: 0.35}
+  branchScale: {x: 0.24, y: 0.48}
+  pickupStoneScale: {x: 0.16, y: 0.3}
   effectScale: {x: 0.45, y: 0.75}
 --- !u!1 &410087039
 GameObject:
@@ -2392,16 +2403,19 @@ MonoBehaviour:
   transitionManager: {fileID: 1947090610}
   performanceSampler: {fileID: 728020902}
   xrOrigin: {fileID: 1037552545}
+  playerView: {fileID: 0}
   hubRoot: {fileID: 216258577}
   locationRoot: {fileID: 1588532010}
   hubSpawnPoint: {fileID: 717273408}
   locationCenter: {fileID: 1878666873}
   returnSpherePrefab: {fileID: 5120854943999503391, guid: b4fbbafed01024d40a8cf17381910568, type: 3}
-  returnSphereForwardDistance: 2.2
-  returnSphereHeightOffset: 1.25
-  returnSphereSideOffset: 0.7
-  baseLocationCenter: {x: 0, y: 0, z: 120}
-  randomLocationOffsetRadius: 20
+  returnSphereForwardDistance: -1.4
+  returnSphereHeightOffset: -0.25
+  returnSphereSideOffset: 1.45
+  returnSphereFollowsPlayerHead: 0
+  forceReturnSphereKinematic: 1
+  baseLocationCenter: {x: 0, y: 0, z: 180}
+  randomLocationOffsetRadius: 35
   enableKeyboardTest: 1
   testSphereColor: yellow
   allowKeyboardGenerationDuringSession: 0
@@ -2795,7 +2809,7 @@ MonoBehaviour:
   heightmapResolution: 129
   terrainLayers:
   - {fileID: 8574412962073106934, guid: acd1f91ae4732f140ab38f18ebfaa16c, type: 2}
-  - {fileID: 8574412962073106934, guid: 2983bd09bd0f61140840533b88bb4fcf, type: 2}
+  - {fileID: 8574412962073106934, guid: 82ab3de8e3e2e484396985dc77b540c2, type: 2}
   - {fileID: 8574412962073106934, guid: 410ebf160a46ed84083e2077ca8fc3d0, type: 2}
   defaultLandHeight: 0.72
   broadHillAmplitude: 0.28

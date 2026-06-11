@@ -170,15 +170,20 @@ public class LocationApiClient : MonoBehaviour
         response.terrain.lakeDepth = 0f;
 
         response.objects.treeCount = 0;
-        response.objects.rockCount = 0;
+        response.objects.rockCount = 6;
         response.objects.cliffCount = 0;
-        response.objects.bushCount = 0;
-        response.objects.grassPatchCount = 0;
-        response.objects.flowerPatchCount = 0;
+        response.objects.bushCount = 4;
+        response.objects.grassPatchCount = 260;
+        response.objects.flowerPatchCount = requestedColor == "yellow" ? 120 : 24;
         response.objects.reedCount = 0;
         response.objects.branchCount = 0;
 
-        response.interactives.pickupStoneCount = 0;
+        response.effects.floatingLeavesCount = 8;
+        response.effects.floatingPetalsCount = requestedColor == "yellow" ? 5 : 2;
+        response.effects.butterflySpawnAreas = requestedColor == "yellow" ? 1 : 0;
+        response.effects.godRayCount = requestedColor == "green" ? 4 : 0;
+
+        response.interactives.pickupStoneCount = requestedColor == "blue" ? 8 : 0;
 
         response.rules.safeRadius = 5f;
         response.rules.minObjectDistance = 0.5f;

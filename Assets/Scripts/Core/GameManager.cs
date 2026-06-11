@@ -33,15 +33,15 @@ public class GameManager : MonoBehaviour
 
     [Header("Return Sphere")]
     [SerializeField] private GameObject returnSpherePrefab;
-    [SerializeField] private float returnSphereForwardDistance = 1.0f;
-    [SerializeField] private float returnSphereHeightOffset = -0.15f;
-    [SerializeField] private float returnSphereSideOffset = 0.25f;
+    [SerializeField] private float returnSphereForwardDistance = -1.4f;
+    [SerializeField] private float returnSphereHeightOffset = -0.25f;
+    [SerializeField] private float returnSphereSideOffset = 1.45f;
     [SerializeField] private bool returnSphereFollowsPlayerHead = false;
     [SerializeField] private bool forceReturnSphereKinematic = true;
 
     [Header("Generated Location Offset")]
-    [SerializeField] private Vector3 baseLocationCenter = new Vector3(0f, 0f, 120f);
-    [SerializeField] private float randomLocationOffsetRadius = 20f;
+    [SerializeField] private Vector3 baseLocationCenter = new Vector3(0f, 0f, 180f);
+    [SerializeField] private float randomLocationOffsetRadius = 35f;
 
     [Header("Testing")]
     [SerializeField] private bool enableKeyboardTest = true;
